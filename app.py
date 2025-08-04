@@ -67,7 +67,7 @@ def malformed_response_endpoint():
     # return "This is plain text, not JSON!", 200, {'Content-Type': 'text/plain'}
 
     # Return the malformed string with a 200 OK status, but with JSON content type
-    # This will force the client to try and parse it as JSON and fail.
+    # This will force the client to try to parse it as JSON and fail.
     return malformed_json_string, 200, {'Content-Type': 'application/json'}
 
 @app.route('/empty-json-response', methods=['GET', 'POST'])
@@ -87,6 +87,51 @@ def empty_json_response_endpoint():
 
     # Return an empty JSON object with a 200 OK status
     return jsonify({}), 200
+
+@app.route('/non-json-with-json-header', methods=['GET', 'POST'])
+def non_json_with_json_header_endpoint():
+    """
+    This endpoint returns a plain text string but with a 'Content-Type: application/json' header.
+    This is intended to cause a JSON parsing error on the client side, as the client will
+    attempt to parse the plain text as JSON and fail. This can lead to a "crash"
+    or unhandled exception if the client's error handling for JSON parsing is not robust.
+    """
+    logging.info(f"Received {request.method} request to /non-json-with-json-header")
+    if request.method == 'POST':
+        if request.is_json:
+            logging.info(f"POST JSON data: {request.json}")
+        else:
+            logging.info(f"POST form data: {request.form}")
+    
+    # Return plain text, but with a JSON content type header
+    return "This is not JSON, but the header says it is!", 200, {'Content-Type': 'application/json'}
+
+@app.route('/empty-structured-json', methods=['GET', 'POST'])
+def empty_structured_json_endpoint():
+    """
+    This endpoint returns a valid JSON object, but with empty or null values
+    for keys that a client application (like FastGPT) might expect to contain
+    meaningful data. This directly targets "empty model flow output" errors.
+    """
+    logging.info(f"Received {request.method} request to /empty-structured-json")
+    if request.method == 'POST':
+        if request.is_json:
+            logging.info(f"POST JSON data: {request.json}")
+        else:
+            logging.info(f"POST form data: {request.form}")
+    
+    # Return a JSON structure with empty/null values
+    response_data = {
+        "output": {
+            "text": "",
+            "tokens": 0,
+            "status": "success",
+            "model_response": None
+        },
+        "details": {},
+        "metadata": []
+    }
+    return jsonify(response_data), 200
 
 
 # Run the Flask application
