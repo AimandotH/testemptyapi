@@ -1,5 +1,5 @@
 # Import necessary libraries
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 import time
 import logging
 
@@ -112,6 +112,12 @@ def empty_structured_json_endpoint():
     This endpoint returns a valid JSON object, but with empty or null values
     for keys that a client application (like FastGPT) might expect to contain
     meaningful data. This directly targets "empty model flow output" errors.
+
+    You can modify 'response_data' below to test different scenarios:
+    1.  'text': "" (empty string) - current default
+    2.  'text': None (null value) - uncomment the line below
+    3.  Omit 'text' key entirely - comment out the 'text' line
+    4.  Omit 'output' key entirely - comment out the 'output' dictionary
     """
     logging.info(f"Received {request.method} request to /empty-structured-json")
     if request.method == 'POST':
@@ -123,15 +129,55 @@ def empty_structured_json_endpoint():
     # Return a JSON structure with empty/null values
     response_data = {
         "output": {
-            "text": "",
+            "text": "", # Current: empty string
+            # "text": None, # Uncomment this to test with 'text' as null
             "tokens": 0,
             "status": "success",
             "model_response": None
         },
+        # "output": None, # Uncomment this to test with 'output' as null
+        # Comment out the entire 'output' dictionary above to test missing 'output' key
         "details": {},
         "metadata": []
     }
     return jsonify(response_data), 200
+
+@app.route('/no-content-204', methods=['GET', 'POST'])
+def no_content_204_endpoint():
+    """
+    This endpoint returns an HTTP 204 No Content status.
+    This explicitly tells the client that the request was successful but there is no
+    response body. If the webhook app expects *any* content, even an empty JSON object,
+    this might trigger an "empty response" error at a lower level than JSON parsing.
+    """
+    logging.info(f"Received {request.method} request to /no-content-204")
+    if request.method == 'POST':
+        if request.is_json:
+            logging.info(f"POST JSON data: {request.json}")
+        else:
+            logging.info(f"POST form data: {request.form}")
+    
+    # Return 204 No Content status. No body should be sent with 204.
+    return Response(status=204)
+
+@app.route('/html-like-response', methods=['GET', 'POST'])
+def html_like_response_endpoint():
+    """
+    This endpoint returns a simple HTML-like string with a 'Content-Type: text/html' header.
+    If the webhook app expects JSON or plain text, receiving HTML could lead to
+    parsing errors or an interpretation of the model output as "empty" because
+    it cannot extract the expected data from the HTML structure.
+    """
+    logging.info(f"Received {request.method} request to /html-like-response")
+    if request.method == 'POST':
+        if request.is_json:
+            logging.info(f"POST JSON data: {request.json}")
+        else:
+            logging.info(f"POST form data: {request.form}")
+    
+    # Return a simple HTML string
+    html_content = "<html><body><h1>Hello from Test API!</h1><p>This is an HTML response.</p></body></html>"
+    return Response(html_content, mimetype='text/html')
 
 
 # Run the Flask application
