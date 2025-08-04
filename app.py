@@ -1,8 +1,7 @@
 # Import necessary libraries
 from flask import Flask, request, jsonify
 import time
-import threading # For background task if needed, but not strictly necessary for simple hang
-import logging # For logging requests
+import logging
 
 # Initialize the Flask application
 app = Flask(__name__)
@@ -44,6 +43,33 @@ def no_response_endpoint():
     # a 200 OK, but that's not the primary intent.
     logging.warning("This line should ideally not be reached if client times out.")
     return jsonify({"message": "This response should not be seen by the client due to timeout."}), 200
+
+@app.route('/malformed-response', methods=['GET', 'POST'])
+def malformed_response_endpoint():
+    """
+    This endpoint is designed to simulate an API that returns a response
+    that is syntactically malformed (e.g., invalid JSON).
+    This can cause client-side parsers to throw errors, leading to a "crash"
+    or unhandled exception in the webhook application if not properly handled.
+    """
+    logging.info(f"Received {request.method} request to /malformed-response")
+    if request.method == 'POST':
+        if request.is_json:
+            logging.info(f"POST JSON data: {request.json}")
+        else:
+            logging.info(f"POST form data: {request.form}")
+
+    # Return a string that looks like incomplete or invalid JSON
+    # For example, missing a closing brace or having extra commas
+    malformed_json_string = '{"status": "error", "message": "This is malformed JSON, missing a closing brace or invalid syntax", "data": [1, 2,'
+    
+    # You could also return plain text when JSON is expected
+    # return "This is plain text, not JSON!", 200, {'Content-Type': 'text/plain'}
+
+    # Return the malformed string with a 200 OK status, but with JSON content type
+    # This will force the client to try and parse it as JSON and fail.
+    return malformed_json_string, 200, {'Content-Type': 'application/json'}
+
 
 # Run the Flask application
 if __name__ == '__main__':
