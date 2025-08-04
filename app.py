@@ -70,6 +70,24 @@ def malformed_response_endpoint():
     # This will force the client to try and parse it as JSON and fail.
     return malformed_json_string, 200, {'Content-Type': 'application/json'}
 
+@app.route('/empty-json-response', methods=['GET', 'POST'])
+def empty_json_response_endpoint():
+    """
+    This endpoint is designed to simulate an API that returns a successful
+    HTTP 200 OK status but with an empty JSON object as the response body.
+    This can trigger "empty response" or "no output" errors in client
+    applications that expect a specific, non-empty data structure.
+    """
+    logging.info(f"Received {request.method} request to /empty-json-response")
+    if request.method == 'POST':
+        if request.is_json:
+            logging.info(f"POST JSON data: {request.json}")
+        else:
+            logging.info(f"POST form data: {request.form}")
+
+    # Return an empty JSON object with a 200 OK status
+    return jsonify({}), 200
+
 
 # Run the Flask application
 if __name__ == '__main__':
