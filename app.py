@@ -118,6 +118,7 @@ def empty_structured_json_endpoint():
     2.  'text': None (null value) - uncomment the line below
     3.  Omit 'text' key entirely - comment out the 'text' line
     4.  Omit 'output' key entirely - comment out the 'output' dictionary
+    5.  'output': None (null output object) - uncomment the line below
     """
     logging.info(f"Received {request.method} request to /empty-structured-json")
     if request.method == 'POST':
@@ -126,20 +127,22 @@ def empty_structured_json_endpoint():
         else:
             logging.info(f"POST form data: {request.form}")
     
-    # Return a JSON structure with empty/null values
+    # --- Modify this 'response_data' dictionary to test different "empty" scenarios ---
     response_data = {
         "output": {
-            "text": "", # Current: empty string
-            # "text": None, # Uncomment this to test with 'text' as null
+            "text": "", # Scenario 1: Empty string for text
+            # "text": None, # Scenario 2: Uncomment to test with 'text' as null
             "tokens": 0,
             "status": "success",
             "model_response": None
         },
-        # "output": None, # Uncomment this to test with 'output' as null
-        # Comment out the entire 'output' dictionary above to test missing 'output' key
+        # "output": None, # Scenario 5: Uncomment to test with 'output' as null
+        # Scenario 4: Comment out the entire 'output' dictionary above to test missing 'output' key
         "details": {},
         "metadata": []
     }
+    # ---------------------------------------------------------------------------------
+    
     return jsonify(response_data), 200
 
 @app.route('/no-content-204', methods=['GET', 'POST'])
@@ -178,6 +181,72 @@ def html_like_response_endpoint():
     # Return a simple HTML string
     html_content = "<html><body><h1>Hello from Test API!</h1><p>This is an HTML response.</p></body></html>"
     return Response(html_content, mimetype='text/html')
+
+@app.route('/empty-body-200', methods=['GET', 'POST'])
+def empty_body_200_endpoint():
+    """
+    This endpoint returns an HTTP 200 OK status with a completely empty response body.
+    This is different from a 204 No Content, as it implies a body *could* be present
+    but isn't. Some client-side parsers or webhook systems might interpret this
+    as an "empty" response if they expect any content at all.
+    """
+    logging.info(f"Received {request.method} request to /empty-body-200")
+    if request.method == 'POST':
+        if request.is_json:
+            logging.info(f"POST JSON data: {request.json}")
+        else:
+            logging.info(f"POST form data: {request.form}")
+    
+    # Return an empty string with 200 OK status and no specific content-type
+    # This often defaults to 'text/plain' or no content-type, which can be problematic
+    return "", 200
+
+@app.route('/simple-unexpected-json', methods=['GET', 'POST'])
+def simple_unexpected_json_endpoint():
+    """
+    This endpoint returns a valid JSON object, but it's a very simple, flat structure.
+    If FastGPT expects a complex, nested structure for its model flow output,
+    this simple JSON might be interpreted as "empty" or "not normal" because
+    it lacks the expected keys or nesting.
+    """
+    logging.info(f"Received {request.method} request to /simple-unexpected-json")
+    if request.method == 'POST':
+        if request.is_json:
+            logging.info(f"POST JSON data: {request.json}")
+        else:
+            logging.info(f"POST form data: {request.form}")
+    
+    # Return a simple, flat JSON object
+    return jsonify({"status": "ok", "message": "This is a simple response."}), 200
+
+@app.route('/specific-llm-like-response', methods=['GET', 'POST'])
+def specific_llm_like_response_endpoint():
+    """
+    This endpoint returns a JSON structure that mimics a common LLM API response,
+    but with placeholder "string" values and an HTML-like tag in the content.
+    This is designed to test if FastGPT's model flow validation specifically
+    checks for actual generated content rather than just the presence of keys.
+    """
+    logging.info(f"Received {request.method} request to /specific-llm-like-response")
+    if request.method == 'POST':
+        if request.is_json:
+            logging.info(f"POST JSON data: {request.json}")
+        else:
+            logging.info(f"POST form data: {request.form}")
+    
+    response_data = {
+        "choices": [
+            {
+                "message": {
+                    "role": "string",
+                    "content": "string<>"
+                },
+                "finish_reason": "string",
+                "index": "string"
+            }
+        ]
+    }
+    return jsonify(response_data), 200
 
 
 # Run the Flask application
